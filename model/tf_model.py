@@ -24,7 +24,7 @@ net_kws_defaults = {
                     'apply_gap': 1,
                     'apply_bns': [1],
                     'apply_dropouts': [1],
-                    'dropout_probs': [0.1,0.3], #input layer, other layers
+                    'dropout_probs': [0.1, 0.3], #input layer, other layers
                     'shortcuts': [0],
                     'hidden_mlp': [],
                     'apply_dropouts_mlp': [1],
@@ -34,7 +34,7 @@ net_kws_defaults = {
 run_kws_defaults = {
                     'lr': 1e-3,
                     'gamma': 0.2,
-                    'milestones': [0.5,0.75],
+                    'milestones': [0.5, 0.75],
                     'weight_decay': 0.,
                     'batch_size': 256
                     }
