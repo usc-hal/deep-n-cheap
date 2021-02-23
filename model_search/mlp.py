@@ -1,9 +1,14 @@
+# =============================================================================
+# Model search over low complexity neural networks/ mlp
+# Sourya Dey, USC
+# =============================================================================
+
 import time
 import numpy as np
 import pickle
 
-from model_search.model_search_helper import distancefunc_ramp, kernelfunc_se, activation, default_weight_decay
-from model_search.model_search_helper import bayesopt, net_kws_defaults, run_kws_defaults, dropout_mlp
+from .model_search import distancefunc_ramp, kernelfunc_se, activation, default_weight_decay
+from .model_search import bayesopt, net_kws_defaults, run_kws_defaults, dropout_mlp
 from .utile import printf
 
 

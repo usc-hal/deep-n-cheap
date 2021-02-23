@@ -1,9 +1,14 @@
+# =============================================================================
+# Model search over low complexity neural networks / cnn-image_classification
+# Sourya Dey, USC
+# =============================================================================
+
 import time
 import numpy as np
 import pickle
 
-from model_search.model_search_helper import distancefunc_ramp, kernelfunc_se, dropout, activation, default_weight_decay
-from model_search.model_search_helper import bayesopt, downsample, net_kws_defaults, batch_norm, shortcut_conns, get_numparams, run_kws_defaults
+from model_search.model_search import distancefunc_ramp, kernelfunc_se, dropout, activation, default_weight_decay
+from model_search.model_search import bayesopt, downsample, net_kws_defaults, batch_norm, shortcut_conns, get_numparams, run_kws_defaults
 from .utile import printf
 
 

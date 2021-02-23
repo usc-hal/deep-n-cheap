@@ -1,8 +1,14 @@
+"""
+ Loading preprocessed yelp dataset
+ Sara Babakniya, USC
+ To be more comparable to the reference model, the data preprocessing and loading
+ is similar to the DPCNN --> https://github.com/riejohnson/gulf
+"""
+
 import torch
-from torch.utils.data.dataset import random_split
-from torch.utils.data import DataLoader
 import numpy as np
 import os
+
 
 PAD_IDX = 0
 OOV_TOK = '!OOV!'
@@ -11,7 +17,21 @@ Cat_ext = '.cat'
 Vocab_ext = '.vocab.txt'
 
 
-def get_saved_data(name, batch_size, data_folder, val_split, seed):
+def get_nlp_dataset(name, batch_size, data_path, val_split, seed):
+    '''
+    Args:
+        name (string): Currently supports Yelp2, Yelp5
+        batch_size (integer): fixed batch size for dataloader
+        data_path: path to the dataset
+        val_split (float): What fraction of training data to use for validation
+            If not 0, val data is taken from end of training set.
+        seed (integer): random seed to make the results repeatable
+
+    Returns:
+        dict: Keys 'train', 'val', 'test', 'type'
+            If val_split is 0, test data is returned as 'val'
+            'type' indicates if it is originally dataloader or the data fed to it
+    '''
     if name == 'yelp.2':
         data_size = 560_000
         dataset = 'yelppol'
@@ -20,11 +40,13 @@ def get_saved_data(name, batch_size, data_folder, val_split, seed):
         data_size = 650_000
         dataset = 'yelpful'
         file_name = "data_full"
+    else:
+        raise NotImplementedError
 
     val_size = int(val_split * data_size)
     train_size = data_size - val_size
     cfg = {
-        'dataroot': data_folder + file_name,
+        'dataroot': data_path + file_name,
         'dataset': dataset,
         'num_train': train_size,
         'num_dev': val_size,
@@ -32,64 +54,16 @@ def get_saved_data(name, batch_size, data_folder, val_split, seed):
         'batch_unit': 32,
         'req_max_len': -1,
         'seed': seed}
-    # data = prepare_yelp_big(batch_size, 'YelpReviewPolarity')
-    # data = prepare_yelp_big(batch_size, 'YelpReviewFull')
-    data = DPCNN_data(cfg)
+    data = prepare_data(cfg)
     return data
 
 
-def prepare_yelp_big(batch_size, name, data_path='/home/babakniy/'):
-    # import os
-    # NGRAMS = 1
-    # dic_len = 30_000
-    # if not os.path.isdir('./.data'):
-    #     os.mkdir('./.data')
-    # if name == 'YelpReviewPolarity':
-    #     voc_path = '/home/babakniy/polar.pth'
-    # else:
-    #     voc_path = '/home/babakniy/full_vocab.pth'
-    # new_counter = torch.load(voc_path)
-    # new_counter[''] = 0
-    # new_counter = dict(sorted(new_counter.items(), key=lambda item: item[1], reverse=True)[:dic_len])
-    # specials = ('<unk>', '<pad>')
-    # for s in specials:
-    #     new_counter[s] = 0
-
-    # import torchtext
-    # from torchtext.datasets import text_classification
-    # my_vocab = torchtext.vocab.Vocab(new_counter)
-    # train_dataset, test_dataset = text_classification.DATASETS[name](root='./.data', ngrams=NGRAMS, vocab=my_vocab)
-    # torch.save(train_dataset, name + '_train.pt')
-    # torch.save(test_dataset, name + '_test.pt')
-    train_dataset = torch.load(data_path + name + '_train.pt')
-    test_dataset = torch.load(data_path + name + '_test.pt')
-    pad_id = train_dataset.get_vocab()['<pad>']
-    train_len = int(len(train_dataset) * 0.9)
-    sub_train_, sub_valid_ = random_split(train_dataset, [train_len, len(train_dataset) - train_len])
-
-    def batching(batch):
-        max_len = 400
-        label = torch.tensor([entry[0] for entry in batch])
-        text = [entry[1][: max_len] for entry in batch]
-        textLength = torch.tensor([entry.shape for entry in text])
-        max_text_length = torch.max(textLength)
-        newtext = [torch.cat((text[i], torch.zeros([max_text_length - textLength[i]], dtype=torch.long) + pad_id), 0)
-                   for i in range(len(text))]
-        text2 = torch.stack(newtext)  # the padded tensor
-        return text2, label
-
-    train_loader = DataLoader(sub_train_, batch_size=batch_size, shuffle=True, collate_fn=batching)
-    valid_loader = DataLoader(sub_valid_, batch_size=batch_size, shuffle=False, collate_fn=batching)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=batching)
-    data = {
-        'type': 'loader',
-        'train': train_loader,
-        'val': valid_loader,
-        'test': test_loader}
-    return data
+"""
+    The below methods are originally used in https://github.com/riejohnson/gulf.
+"""
 
 
-def DPCNN_data(cfg):
+def prepare_data(cfg):
     trn_dlist, dev_dlist = get_dlist(cfg['seed'], cfg['num_train'], cfg['num_dev'], None, None, len(prep_uni('train', cfg['dataroot'], cfg['dataset'])))
     td_ds, td_ls = read_ds_ls_x(trn_dlist, cfg['dataroot'], cfg['dataset'])  # training data
     dv_ds, dv_ls = read_ds_ls_x(dev_dlist, cfg['dataroot'], cfg['dataset'])  # validation data

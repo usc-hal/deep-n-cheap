@@ -13,51 +13,53 @@ import time
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 net_kws_defaults = {
-                    'act': 'relu',
-                    'out_channels': [],
-                    'kernel_sizes': [3],
-                    'paddings': ['valid'],
-                    'dilations': [1],
-                    'groups': [1],
-                    'strides': [1],
-                    'apply_maxpools': [0],
-                    'apply_gap': 1,
-                    'apply_bns': [1],
-                    'apply_dropouts': [1],
-                    'dropout_probs': [0.1, 0.3], #input layer, other layers
-                    'shortcuts': [0],
-                    'hidden_mlp': [],
-                    'apply_dropouts_mlp': [1],
-                    'dropout_probs_mlp': [0.2],
-                    }
+    'act': 'relu',
+    'out_channels': [],
+    'kernel_sizes': [3],
+    'paddings': ['valid'],
+    'dilations': [1],
+    'groups': [1],
+    'strides': [1],
+    'apply_maxpools': [0],
+    'apply_gap': 1,
+    'apply_bns': [1],
+    'apply_dropouts': [1],
+    'dropout_probs': [0.1, 0.3],  # input layer, other layers
+    'shortcuts': [0],
+    'hidden_mlp': [],
+    'apply_dropouts_mlp': [1],
+    'dropout_probs_mlp': [0.2]
+}
 
 run_kws_defaults = {
-                    'lr': 1e-3,
-                    'gamma': 0.2,
-                    'milestones': [0.5, 0.75],
-                    'weight_decay': 0.,
-                    'batch_size': 256
-                    }
+    'lr': 1e-3,
+    'gamma': 0.2,
+    'milestones': [0.5, 0.75],
+    'weight_decay': 0.,
+    'batch_size': 256
+}
 
 
 F_activations = {
-                'relu': tf.nn.relu,
-                'tanh': tf.nn.tanh,
-                'sigmoid': tf.nn.sigmoid
-                }
+    'relu': tf.nn.relu,
+    'tanh': tf.nn.tanh,
+    'sigmoid': tf.nn.sigmoid
+}
 
 nn_activations = {
-                'relu': tf.keras.layers.Activation('relu'),
-                'tanh': tf.keras.layers.Activation('tanh'),
-                'sigmoid': tf.keras.layers.Activation('sigmoid'),
-                }
+    'relu': tf.keras.layers.Activation('relu'),
+    'tanh': tf.keras.layers.Activation('tanh'),
+    'sigmoid': tf.keras.layers.Activation('sigmoid'),
+}
 
 # =============================================================================
 # Classes
 # =============================================================================
+
+
 class Net(tf.keras.Model):
 
-    def __init__(self, input_size = [3,32,32], output_size = 10, problem_type = 'classification', **kw):
+    def __init__(self, input_size=[3, 32, 32], output_size=10, problem_type='classification', **kw):
         '''
         *** Create tf.keras net ***
         input_size: Iterable. Size of 1 input. Example: [3,32,32] for CIFAR, [784] for MNIST
@@ -66,7 +68,7 @@ class Net(tf.keras.Model):
         kw:
             act: String. Activation for all layers. Must be pre-defined in F_activations and nn_activations. Default 'relu'
             --- CONV ---:
-                    out_channels: Iterable. #filters in each conv layer, i.e. #conv layers. If no conv layer is needed, enter []          
+                    out_channels: Iterable. #filters in each conv layer, i.e. #conv layers. If no conv layer is needed, enter []
                 --- For the next kws, either pass an iterable of size = size of out_channels, OR leave blank to get default values ---
                         kernel_sizes: Default all 3
                         strides: Default all 1
@@ -86,7 +88,7 @@ class Net(tf.keras.Model):
                     hidden_mlp: Iterable. #nodes in the hidden layers only.
                     apply_dropouts_mlp: Whether to apply dropout after current hidden layer. Iterable of size = number of hidden layers. Default all 0
                     dropout_probs_mlp: As in dropout_probs for conv. Default all 0.5
-                    
+
                     Examples:
                         If input_size=800, output_size=10, and hidden_mlp is not given, or is [], then the config will be [800,10]. By default, apply_dropouts_mlp = [], dropout_probs_mlp = []
                         If input_size=800, output_size=10, and hidden_mlp is [100,100], then the config will be [800,100,100,10]. apply_dropouts_mlp for example can be [1,0], then dropout_probs_mlp = [0.5] by default
@@ -94,46 +96,46 @@ class Net(tf.keras.Model):
         super(Net, self).__init__()
         self.act = kw['act'] if 'act' in kw else net_kws_defaults['act']
 
-        #### Conv ####
+        # ### Conv ####
         self.out_channels = kw['out_channels'] if 'out_channels' in kw else net_kws_defaults['out_channels']
         self.num_layers_conv = len(self.out_channels)
-        self.kernel_sizes = kw['kernel_sizes'] if 'kernel_sizes' in kw else self.num_layers_conv*net_kws_defaults['kernel_sizes']
-        self.strides = kw['strides'] if 'strides' in kw else self.num_layers_conv*net_kws_defaults['strides']
-        self.paddings = kw['paddings']  if 'paddings' in kw else self.num_layers_conv*['same']
-        self.dilations = kw['dilations'] if 'dilations' in kw else self.num_layers_conv*net_kws_defaults['dilations']
-        self.groups = kw['groups'] if 'groups' in kw else self.num_layers_conv*net_kws_defaults['groups']
-        self.apply_bns = kw['apply_bns'] if 'apply_bns' in kw else self.num_layers_conv*net_kws_defaults['apply_bns']
-        self.apply_maxpools = kw['apply_maxpools'] if 'apply_maxpools' in kw else self.num_layers_conv*net_kws_defaults['apply_maxpools']
+        self.kernel_sizes = kw['kernel_sizes'] if 'kernel_sizes' in kw else self.num_layers_conv * net_kws_defaults['kernel_sizes']
+        self.strides = kw['strides'] if 'strides' in kw else self.num_layers_conv * net_kws_defaults['strides']
+        self.paddings = kw['paddings'] if 'paddings' in kw else self.num_layers_conv * ['same']
+        self.dilations = kw['dilations'] if 'dilations' in kw else self.num_layers_conv * net_kws_defaults['dilations']
+        self.groups = kw['groups'] if 'groups' in kw else self.num_layers_conv * net_kws_defaults['groups']
+        self.apply_bns = kw['apply_bns'] if 'apply_bns' in kw else self.num_layers_conv * net_kws_defaults['apply_bns']
+        self.apply_maxpools = kw['apply_maxpools'] if 'apply_maxpools' in kw else self.num_layers_conv * net_kws_defaults['apply_maxpools']
         self.apply_gap = kw['apply_gap'] if 'apply_gap' in kw else net_kws_defaults['apply_gap']
 
-        self.apply_dropouts = kw['apply_dropouts'] if 'apply_dropouts' in kw else self.num_layers_conv*net_kws_defaults['apply_dropouts']
+        self.apply_dropouts = kw['apply_dropouts'] if 'apply_dropouts' in kw else self.num_layers_conv * net_kws_defaults['apply_dropouts']
         if 'dropout_probs' in kw:
             self.dropout_probs = kw['dropout_probs']
         else:
-            self.dropout_probs = np.count_nonzero(self.apply_dropouts)*[net_kws_defaults['dropout_probs'][1]]
-            if len(self.apply_dropouts)!=0 and self.apply_dropouts[0]==1:
+            self.dropout_probs = np.count_nonzero(self.apply_dropouts) * [net_kws_defaults['dropout_probs'][1]]
+            if len(self.apply_dropouts) != 0 and self.apply_dropouts[0] == 1:
                 self.dropout_probs[0] = net_kws_defaults['dropout_probs'][0]
 
-        self.shortcuts = kw['shortcuts'] if 'shortcuts' in kw else self.num_layers_conv*net_kws_defaults['shortcuts']
+        self.shortcuts = kw['shortcuts'] if 'shortcuts' in kw else self.num_layers_conv * net_kws_defaults['shortcuts']
 
         dropout_index = 0
 
         self.conv = {}
         for i in range(self.num_layers_conv):
             self.conv['conv-{0}'.format(i)] = tf.keras.layers.Conv2D(
-                                                filters=self.out_channels[i],
-                                                kernel_size=self.kernel_sizes[i],
-                                                strides=self.strides[i],
-                                                padding=self.paddings[i], # NOTE: one of "valid" or "same"
-                                                dilation_rate=self.dilations[i],
-                                                # TODO: group conv
-                                                )
-            
+                filters=self.out_channels[i],
+                kernel_size=self.kernel_sizes[i],
+                strides=self.strides[i],
+                padding=self.paddings[i],  # NOTE: one of "valid" or "same"
+                dilation_rate=self.dilations[i],
+                #  TODO: group conv
+            )
+
             if self.apply_maxpools[i] == 1:
                 self.conv['mp-{0}'.format(i)] = tf.keras.layers.MaxPool2D(
-                                                    pool_size=2, # TODO: hyper-parameter for searching
-                                                    )
-            
+                    pool_size=2,  # TODO: hyper-parameter for searching
+                )
+
             if self.apply_bns[i] == 1:
                 self.conv['bn-{0}'.format(i)] = tf.keras.layers.BatchNormalization()
 
@@ -143,19 +145,19 @@ class Net(tf.keras.Model):
                 self.conv['drop-{0}'.format(i)] = tf.keras.layers.Dropout(self.dropout_probs[dropout_index])
                 dropout_index += 1
 
-        if self.apply_gap == 1 and self.num_layers_conv > 0: #GAP is not done when there are no conv layers
+        if self.apply_gap == 1 and self.num_layers_conv > 0:  # GAP is not done when there are no conv layers
             self.conv['gap'] = tf.keras.layers.GlobalAveragePooling2D()
 
-        #### MLP ####
+        # ### MLP ####
         # self.mlp_input_size = self.get_mlp_input_size(input_size, self.conv)
-        self.n_mlp = [-1, output_size] # tf.keras don't need input size
+        self.n_mlp = [-1, output_size]  # tf.keras don't need input size
         if 'hidden_mlp' in kw:
-            self.n_mlp[1:1] = kw['hidden_mlp'] #now n_mlp has the full MLP config, e.g. [-1,100,10]
+            self.n_mlp[1:1] = kw['hidden_mlp']  # now n_mlp has the full MLP config, e.g. [-1,100,10]
         else:
             self.n_mlp[1:1] = net_kws_defaults['hidden_mlp']
         self.num_hidden_layers_mlp = len(self.n_mlp[1:-1])
-        self.apply_dropouts_mlp = kw['apply_dropouts_mlp'] if 'apply_dropouts_mlp' in kw else self.num_hidden_layers_mlp*net_kws_defaults['apply_dropouts_mlp']
-        self.dropout_probs_mlp = kw['dropout_probs_mlp'] if 'dropout_probs_mlp' in kw else np.count_nonzero(self.apply_dropouts_mlp)*net_kws_defaults['dropout_probs_mlp']
+        self.apply_dropouts_mlp = kw['apply_dropouts_mlp'] if 'apply_dropouts_mlp' in kw else self.num_hidden_layers_mlp * net_kws_defaults['apply_dropouts_mlp']
+        self.dropout_probs_mlp = kw['dropout_probs_mlp'] if 'dropout_probs_mlp' in kw else np.count_nonzero(self.apply_dropouts_mlp) * net_kws_defaults['dropout_probs_mlp']
         self.mlp = {}
         dropout_index = 0
         for i in range(1, len(self.n_mlp)):
@@ -176,15 +178,15 @@ class Net(tf.keras.Model):
         for layer in self.conv:
             if isinstance(self.conv[layer], tf.keras.layers.Conv2D):
                 block = int(layer.split('-')[1])
-                if block>0 and self.shortcuts[block-1] == 1:
-                    rejoin = block+1
+                if block > 0 and self.shortcuts[block - 1] == 1:
+                    rejoin = block + 1
                     y = x
-                    count_downsampling = sum(self.apply_maxpools[block:block+2]) + sum(self.strides[block:block+2]) - 2
+                    count_downsampling = sum(self.apply_maxpools[block:block + 2]) + sum(self.strides[block:block + 2]) - 2
                     for _ in range(count_downsampling):
                         y = tf.keras.layers.AveragePooling2D(pool_size=(2, 2))(y)
 
-                    y = tf.pad(y,[[0,0],[0,0],[0,0],[0,self.out_channels[block+1] - self.out_channels[block-1]]], 'CONSTANT')
-            if block==rejoin and 'act' in layer: #add shortcut to residual just before activation
+                    y = tf.pad(y, [[0, 0], [0, 0], [0, 0], [0, self.out_channels[block + 1] - self.out_channels[block - 1]]], 'CONSTANT')
+            if block == rejoin and 'act' in layer:  # add shortcut to residual just before activation
                 x = tf.keras.layers.Add()([x, y])
             x = self.conv[layer](x)
         x = tf.keras.layers.Flatten()(x)
@@ -195,6 +197,8 @@ class Net(tf.keras.Model):
 # =============================================================================
 # Helper methods
 # =============================================================================
+
+
 def get_numparams(input_size, output_size, net_kw):
     ''' Get number of parameters in any net '''
     net = Net(input_size=input_size, output_size=output_size, **net_kw)
@@ -207,15 +211,17 @@ def get_numparams(input_size, output_size, net_kw):
 # =============================================================================
 # Main method to run network
 # =============================================================================
+
+
 def run_network(
-                data, input_size, output_size, problem_type, net_kw, run_kw,
-                num_workers = 8, pin_memory = True,
-                validate = True, val_patience = np.inf, test = False, ensemble = False,
-                numepochs = 100,
-                wt_init = None,#nn.init.kaiming_normal_, 
-                bias_init = None,#(lambda x : nn.init.constant_(x,0.1)),
-                verbose = True
-               ):
+    data, input_size, output_size, problem_type, net_kw, run_kw,
+    num_workers=8, pin_memory=True,
+    validate=True, val_patience=np.inf, test=False, ensemble=False,
+    numepochs=100,
+    wt_init=None,  # nn.init.kaiming_normal_,
+    bias_init=None,  # (lambda x : nn.init.constant_(x,0.1)),
+    verbose=True
+):
     '''
     ARGS:
         data:
@@ -237,7 +243,7 @@ def run_network(
         numepochs: Self explanatory
         wt_init, bias_init: Respective pytorch functions
         verbose: Print messages
-    
+
     RETURNS:
         net: Complete net
         recs: Dictionary with a key for each stat collected and corresponding value for all values of the stat
@@ -248,9 +254,9 @@ def run_network(
 # =============================================================================
     net = Net(input_size=input_size, output_size=output_size, problem_type=problem_type, **net_kw)
     net.build(tuple([None] + input_size[1:] + [input_size[0]]))
-    ## Use GPUs if available ##
-    
-    ## Initialize MLP params ##
+    # # Use GPUs if available ##
+
+    # # Initialize MLP params ##
     # TODO: weight initialization in tf.keras
     '''
     for i in range(len(net.mlp)):
@@ -264,20 +270,20 @@ def run_network(
 #     Hyperparameters for the run
 # =============================================================================
     lr = run_kw['lr'] if 'lr' in run_kw else run_kws_defaults['lr']
-    gamma = run_kw['gamma'] if 'gamma' in run_kw else run_kws_defaults['gamma'] #previously used value according to decay = 1e-5 in keras = 0.9978 for ExponentialLR
+    gamma = run_kw['gamma'] if 'gamma' in run_kw else run_kws_defaults['gamma']  # previously used value according to decay = 1e-5 in keras = 0.9978 for ExponentialLR
     milestones = run_kw['milestones'] if 'milestones' in run_kw else run_kws_defaults['milestones']
     weight_decay = run_kw['weight_decay'] if 'weight_decay' in run_kw else run_kws_defaults['weight_decay']
     batch_size = run_kw['batch_size'] if 'batch_size' in run_kw else run_kws_defaults['batch_size']
-    if not isinstance(batch_size,int):
-        batch_size = batch_size.item() #this is required for pytorch
-    
+    if not isinstance(batch_size, int):
+        batch_size = batch_size.item()  # this is required for pytorch
+
     if problem_type == 'classification':
         lossfunc = tf.keras.losses.SparseCategoricalCrossentropy()
     elif problem_type == 'regression':
         lossfunc = tf.keras.losses.MeanSquaredError()
     opt = tf.keras.optimizers.Adam(learning_rate=lr, decay=weight_decay)
     net.compile(optimizer=opt, loss=lossfunc, metrics=['accuracy'])
-    trainable_count = np.sum([K.count_params(w) for w in net.trainable_weights])
+    # trainable_count = np.sum([K.count_params(w) for w in net.trainable_weights])
 
     def multi_step_lr(epoch):
         LR_START = lr
@@ -288,13 +294,13 @@ def run_network(
             if epoch >= int(milestone * NUMEPOCHS):
                 step += 1
         return LR_START * (GAMMA ** step)
-        
+
     lr_callback = tf.keras.callbacks.LearningRateScheduler(multi_step_lr, verbose=verbose)
 
 # =============================================================================
 # Data
 # =============================================================================
-    xtr,ytr, xva,yva, xte,yte = data
+    xtr, ytr, xva, yva, xte, yte = data
 
 # =============================================================================
 #     Define records to collect
@@ -302,9 +308,9 @@ def run_network(
     recs = {}
 
     total_t = 0
-    best_val_acc = -np.inf
-    best_val_loss = np.inf
-    
+    # best_val_acc = -np.inf
+    # best_val_loss = np.inf
+
     class TimeHistory(tf.keras.callbacks.Callback):
         def on_train_begin(self, logs={}):
             self.times = []
@@ -322,7 +328,7 @@ def run_network(
         # def on_test_end(self, batch, logs={}):
         #     self.test_times.append(time.time() - self.test_time_start)
 
-    th_callback = TimeHistory()#verbose=verbose)
+    th_callback = TimeHistory()  # verbose=verbose)
 # =============================================================================
 #         Run epoch
 # =============================================================================
@@ -332,34 +338,34 @@ def run_network(
         elif problem_type == 'regression':
             es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=val_patience, verbose=verbose, restore_best_weights=True)
         history = net.fit(
-                x=xtr,
-                y=ytr,
-                verbose=verbose,
-                validation_data=(xva, yva),
-                batch_size=batch_size,
-                epochs=numepochs,
-                shuffle=True,
-                use_multiprocessing=False,
-                callbacks=[lr_callback, th_callback, es_callback])
+            x=xtr,
+            y=ytr,
+            verbose=verbose,
+            validation_data=(xva, yva),
+            batch_size=batch_size,
+            epochs=numepochs,
+            shuffle=True,
+            use_multiprocessing=False,
+            callbacks=[lr_callback, th_callback, es_callback])
         recs['val_accs'] = np.array(history.history['val_accuracy']) * 100
         recs['val_losses'] = history.history['val_loss']
         # recs['val_final_outputs'] = None # NOT use
     else:
         history = net.fit(
-                x=xtr,
-                y=ytr,
-                verbose=verbose,
-                batch_size=batch_size,
-                epochs=numepochs,
-                shuffle=True,
-                use_multiprocessing=False,
-                callbacks=[lr_callback, th_callback])
+            x=xtr,
+            y=ytr,
+            verbose=verbose,
+            batch_size=batch_size,
+            epochs=numepochs,
+            shuffle=True,
+            use_multiprocessing=False,
+            callbacks=[lr_callback, th_callback])
     recs['train_accs'] = np.array(history.history['accuracy']) * 100
     recs['train_losses'] = history.history['loss']
 
     total_t += np.sum(th_callback.times)
 
-    ## Final val metrics ##
+    # # Final val metrics ##
     if validate is True:
         if problem_type == 'classification':
             print('\nBest validation accuracy = {0}% obtained in epoch {1}'.format(np.max(recs['val_accs']), np.argmax(recs['val_accs']) + 1))
@@ -368,19 +374,19 @@ def run_network(
 
     if test is True:
         ret = net.evaluate(
-                x=xte,
-                y=yte,
-                verbose=verbose,
-                batch_size=batch_size,
-                workers=1,
-                use_multiprocessing=False)
+            x=xte,
+            y=yte,
+            verbose=verbose,
+            batch_size=batch_size,
+            workers=1,
+            use_multiprocessing=False)
         recs['test_acc'] = ret[1] * 100
         recs['test_loss'] = ret[0]
         # recs['test_final_outputs'] = None # NOT use
-        print('Test accuracy = {0}%, Loss = {1}\n'.format(np.round(recs['test_acc'],2), np.round(recs['test_loss'],3)))
-            
-    ## Avg time taken per epoch ##
-    recs['t_epoch'] = total_t/(numepochs-1) if numepochs>1 else total_t
+        print('Test accuracy = {0}%, Loss = {1}\n'.format(np.round(recs['test_acc'], 2), np.round(recs['test_loss'], 3)))
+
+    # # Avg time taken per epoch ##
+    recs['t_epoch'] = total_t / (numepochs - 1) if numepochs > 1 else total_t
     print('Avg time taken per epoch = {0}'.format(recs['t_epoch']))
 
     return net, recs

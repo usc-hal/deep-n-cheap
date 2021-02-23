@@ -1,21 +1,15 @@
+# =============================================================================
+# Model search over low complexity neural networks / cnn-nlp
+# Sara Babakniya, USC
+# =============================================================================
+
 import time
 import numpy as np
 import pickle
 
-from .model_search_helper import distancefunc_ramp, kernelfunc_se, dropout, activation, default_weight_decay
-from .model_search_helper import bayesopt, downsample, net_kws_defaults, shortcut_conns, get_numparams, run_kws_defaults
+from .model_search import distancefunc_ramp, kernelfunc_se, dropout, activation, default_weight_decay
+from .model_search import bayesopt, downsample, net_kws_defaults, shortcut_conns, get_numparams, run_kws_defaults
 from utile import printf
-
-
-DPCNN_STATE = {
-    'out_channels': [250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250, 250],
-    'embedding_dim': 250,
-    'apply_maxpools': [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0],
-    'shortcuts': [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    'act': 'relu',
-    'strides': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    'lr': 0.1, 'weight_decay': 0.0001,
-    'batch_size': 64}
 
 
 def run_model_search_nlp(data, dataset_code,
@@ -24,7 +18,7 @@ def run_model_search_nlp(data, dataset_code,
                          bo_prior_states, bo_steps, bo_explore, grid_search_order,
                          num_conv_layers, channels_first, channels_upper, lr, weight_decay, batch_size,
                          bn_fracs, do_fracs, input_drop_probs, drop_probs,
-                         num_best, prior_time, embedding_dim, is_dpcnn):
+                         num_best, prior_time, embedding_dim):
 
     run_network_kw = {
         'data': data,
@@ -57,24 +51,19 @@ def run_model_search_nlp(data, dataset_code,
     #     Step 1: Bayesian optimization for number of layers and out_channels
     #     Step 2: Fine-tuning architecture using grid search
     #     Step 3: Bayesian optimization for training hyperparameters
-    if is_dpcnn:
-        the_best_state = DPCNN_STATE
-        final_best_states, final_best_loss_stats = step3(get_states_limits, the_best_state, val_patience, numepochs,
-                                                         dataset_code, run_network_kw, wc, tbar_epoch, problem_type,
-                                                         distancefunc, kernelfunc, training_hyps_bo)
-    else:
-        the_best_states, the_best_loss_stats = \
-            step1(get_states_limits, val_patience, numepochs, dataset_code, run_network_kw,
-                  wc, tbar_epoch, problem_type, distancefunc, kernelfunc, covmat_out_channels_limits,
-                  embedding_dim, out_channels_bo, start_time, prior_time)
-        the_best_loss_val_acc, the_best_loss, the_best_loss_t_epoch, the_best_state = \
-            step2(the_best_states, the_best_loss_stats, grid_search_order, val_patience, numepochs,
-                  dataset_code, run_network_kw, wc, tbar_epoch, problem_type, do_fracs, input_drop_probs,
-                  drop_probs, start_time, prior_time)
-        final_best_states, final_best_loss_stats = \
-            step3(get_states_limits, the_best_state, val_patience, numepochs,
-                  dataset_code, run_network_kw, wc, tbar_epoch, problem_type,
-                  distancefunc, kernelfunc, training_hyps_bo)
+
+    the_best_states, the_best_loss_stats = \
+        step1(get_states_limits, val_patience, numepochs, dataset_code, run_network_kw,
+              wc, tbar_epoch, problem_type, distancefunc, kernelfunc, covmat_out_channels_limits,
+              embedding_dim, out_channels_bo, start_time, prior_time)
+    the_best_loss_val_acc, the_best_loss, the_best_loss_t_epoch, the_best_state = \
+        step2(the_best_states, the_best_loss_stats, grid_search_order, val_patience, numepochs,
+              dataset_code, run_network_kw, wc, tbar_epoch, problem_type, do_fracs, input_drop_probs,
+              drop_probs, start_time, prior_time)
+    final_best_states, final_best_loss_stats = \
+        step3(get_states_limits, the_best_state, val_patience, numepochs,
+              dataset_code, run_network_kw, wc, tbar_epoch, problem_type,
+              distancefunc, kernelfunc, training_hyps_bo)
 
     # Append architectures ##
     for i in range(len(final_best_states)):

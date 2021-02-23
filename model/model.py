@@ -6,7 +6,7 @@
 import os
 
 if os.environ['DNC_DL_FRAMEWORK'] == 'torch':
-    from model.torch_models.helper import run_network, get_numparams, run_kws_defaults
+    from model.torch_models.train import run_network, get_numparams, run_kws_defaults
     from model.torch_models.nets import net_kws_defaults, nn_activations
 elif os.environ['DNC_DL_FRAMEWORK'] == 'tf.keras':
     from model.tf_model import run_network, get_numparams, net_kws_defaults, run_kws_defaults, nn_activations

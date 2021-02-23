@@ -1,6 +1,6 @@
 # =============================================================================
 # Model search over low complexity neural networks
-# Sourya Dey, USC
+# Sourya Dey, Sara Babakniya, USC
 # =============================================================================
 
 import numpy as np
@@ -41,7 +41,11 @@ def default_weight_decay(dataset_code, input_size, output_size, net_kw):
 
 
 def form_shortcuts_start_every(numlayers):
-    return np.inf if numlayers <= 2 else 2  # Sara
+    return np.inf if numlayers <= 8 else 4 if 9 <= numlayers <= 14 else 2
+
+
+def form_shortcuts_start_every_nlp(numlayers):
+    return np.inf if numlayers <= 2 else 2
 
 
 def form_shortcuts(num_conv_layers, start_from=0, start_every=2):
@@ -99,8 +103,9 @@ def get_states(numstates=15,
         # out_channels_first ##
         lower, upper = limits['out_channels_first']
         out_channels_first = (lower + samp[:, si % nsv] * (upper + 1 - lower)).astype('int')
-        lower, upper = limits['embedding_dim']
-        embedding_dim = (lower + samp[:, si % nsv] * (upper + 1 - lower)).astype('int')
+        if 'embedding_dim' in state_keys:
+            lower, upper = limits['embedding_dim']
+            embedding_dim = (lower + samp[:, si % nsv] * (upper + 1 - lower)).astype('int')
         # don't increment si right now, it will be done after all out_channels are done
 
         # remaining out_channels, and other channel-dependent keys like downsampling and shortcuts ##
@@ -108,28 +113,32 @@ def get_states(numstates=15,
             states[n]['out_channels'] = num_conv_layers[n] * [0]
             states[n]['out_channels'][0] = out_channels_first[n]
             states[n]['apply_maxpools'] = num_conv_layers[n] * [0]
-            states[n]['embedding_dim'] = embedding_dim[n]
-            # count_maxpools = 0
-
+            if 'embedding_dim' in state_keys:
+                states[n]['embedding_dim'] = embedding_dim[n]
+            count_maxpools = 0
             for i in range(1, num_conv_layers[n]):
                 lower = states[n]['out_channels'][i - 1]
                 upper = np.minimum(2 * states[n]['out_channels'][i - 1], limits['out_channels'][1])
                 states[n]['out_channels'][i] = (lower + samp[n, (si + i) % nsv] * (upper + 1 - lower)).astype('int')
-                # if states[n]['out_channels'][i] > 64 and count_maxpools == 0:
-                #     states[n]['apply_maxpools'][i - 1] = 1
-                #     count_maxpools += 1
-                # elif states[n]['out_channels'][i] > 128 and count_maxpools == 1:
-                #     states[n]['apply_maxpools'][i - 1] = 1
-                #     count_maxpools += 1
-                # elif states[n]['out_channels'][i] > 256 and count_maxpools == 2:
-                #     states[n]['apply_maxpools'][i - 1] = 1
-                #     count_maxpools += 1
-                if states[n]['apply_maxpools'][i - 1] == 0:
-                    states[n]['apply_maxpools'][i] = np.random.randint(2)
+                if 'embedding_dim' in state_keys:
+                    if states[n]['apply_maxpools'][i - 1] == 0:
+                        states[n]['apply_maxpools'][i] = np.random.randint(2)
 
-            # states[n]['shortcuts'] = form_shortcuts(num_conv_layers[n], start_from=1, start_every=form_shortcuts_start_every(num_conv_layers[n]))
-            # change :
-            states[n]['shortcuts'] = form_shortcuts(num_conv_layers[n], start_every=form_shortcuts_start_every(num_conv_layers[n]))
+                else:
+                    if states[n]['out_channels'][i] > 64 and count_maxpools == 0:
+                        states[n]['apply_maxpools'][i - 1] = 1
+                        count_maxpools += 1
+                    elif states[n]['out_channels'][i] > 128 and count_maxpools == 1:
+                        states[n]['apply_maxpools'][i - 1] = 1
+                        count_maxpools += 1
+                    elif states[n]['out_channels'][i] > 256 and count_maxpools == 2:
+                        states[n]['apply_maxpools'][i - 1] = 1
+                        count_maxpools += 1
+
+            if 'embedding_dim' in state_keys:
+                states[n]['shortcuts'] = form_shortcuts(num_conv_layers[n], start_every=form_shortcuts_start_every_nlp(num_conv_layers[n]))
+            else:
+                states[n]['shortcuts'] = form_shortcuts(num_conv_layers[n], start_from=1, start_every=form_shortcuts_start_every(num_conv_layers[n]))
 
         si += limits['num_conv_layers'][1]
 
@@ -157,9 +166,6 @@ def get_states(numstates=15,
         si += 1
         for n in range(numstates):
             states[n]['lr'] = lrs[n]
-        # states[0]['lr'] = 0.001
-        # for n in range(1, numstates):
-        #     states[n]['lr'] = lrs[n]
 
     # weight_decay ##
     if 'weight_decay' in state_keys:
@@ -169,9 +175,6 @@ def get_states(numstates=15,
         weight_decays[weight_decays < 10**(lower + 1)] = 0.  # make lowest order of magnitude = 0
         for n in range(numstates):
             states[n]['weight_decay'] = weight_decays[n]
-        # states[0]['weight_decay'] = 0
-        # for n in range(1, numstates):
-        #     states[n]['weight_decay'] = weight_decays[n]
 
     # batch size ##
     if 'batch_size' in state_keys:
@@ -315,9 +318,14 @@ def covmat(S1, S2,
                                 d = omega[key]
                             kern += kernelfunc(d) / len(sbig[key])
 
-                    elif key == 'hidden_mlp' or key == 'embedding_dim':
+                    elif key == 'embedding_dim':
                         kern = kernelfunc(distancefunc(np.sum(s1[key]), np.sum(s2[key]), omega=omega[key], upper=limits[key][1], lower=limits[key][0], root=2))
                         kern += kernelfunc(distancefunc(1, 1, omega=omega[key], upper=1, lower=1))
+                        kern /= 2
+
+                    elif key == 'hidden_mlp':
+                        kern = kernelfunc(distancefunc(np.sum(s1[key]), np.sum(s2[key]), omega=omega[key], upper=limits[key][0][1], lower=limits[key][0][0], root=2))
+                        kern += kernelfunc(distancefunc(len(s1[key]), len(s2[key]), omega=omega[key], upper=limits[key][1][1], lower=limits[key][1][0]))
                         kern /= 2
 
                     else:
@@ -415,8 +423,7 @@ def bayesopt(state_kw={}, loss_kw={},
 
     # Set kernel hyperparameters (if they are being optimized using ML, they will be overwritten later) ##
     omega = {key: 3 for key in cov_keys} if omega == {} else omega
-    kernel_comb_weights = {key: 1 for key in cov_keys} if kernel_comb_weights == {} else kernel_comb_weights   # Sara
-    # kernel_comb_weights = {key: 1 for key in cov_keys} if kernel_comb_weights == {} else kernel_comb_weights   # Sara
+    kernel_comb_weights = {key: 1 for key in cov_keys} if kernel_comb_weights == {} else kernel_comb_weights
 
     covmat_kw.update({'cov_keys': cov_keys, 'omega': omega, 'kernel_comb_weights': kernel_comb_weights})
     for step in range(steps):
@@ -488,7 +495,6 @@ def downsample(apply_maxpools, loss_kw={}):
             for i in range(len(bdigits)):
                 if bdigits[i] == 0:
                     strides[locs[i]] = 2
-                    # pass
                 else:
                     apply_maxpools[locs[i]] = 1
 
@@ -496,15 +502,15 @@ def downsample(apply_maxpools, loss_kw={}):
             states.append({'strides': strides, 'apply_maxpools': apply_maxpools})
             loss_stats.append(lossfunc(state=states[-1], **loss_kw))
             losses = np.append(losses, loss_stats[-1]['loss'])
-            printf('State = {0}, Loss = {1}\n'.format(states[-1], losses[-1]))
+            print('State = {0}, Loss = {1}\n'.format(states[-1], losses[-1]))
 
         best_pos, best_loss = np.argmin(losses), np.min(losses)
         best_state, best_loss_stats = states[best_pos], loss_stats[best_pos]
-        printf('\nBest state = {0}, Best loss = {1}'.format(best_state, best_loss))
+        print('\nBest state = {0}, Best loss = {1}'.format(best_state, best_loss))
         return best_state, best_loss, best_loss_stats
 
     else:
-        printf('No downsampling cases to try')
+        print('No downsampling cases to try')
         return None, np.inf, None
 
 
