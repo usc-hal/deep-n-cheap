@@ -72,22 +72,9 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 if args.network == "nlp":
-    # from data.nlp_data import get_nlp_dataset
+    from data.nlp_data import get_nlp_dataset
     dataset = args.dataset + f'.{args.output_size}'
-    # data = get_nlp_dataset(dataset, args.batch_size[0], args.data_folder, args.val_split, args.seed)
-    from torch.utils.data import TensorDataset, DataLoader
-    from torch.utils.data import RandomSampler
-    tx = torch.randint(1, 150, (64, 100))
-    ty = torch.randint(0, 2, (64,))
-    td = TensorDataset(tx, ty)
-    ts = RandomSampler(td)
-    train_dataloader = DataLoader(td, sampler=ts, batch_size=args.batch_size[0])
-    data = {
-        'train': train_dataloader,
-        'val': train_dataloader,
-        'test': train_dataloader,
-        'type': 'loader'
-    }
+    data = get_nlp_dataset(dataset, args.batch_size[0], args.data_folder, args.val_split, args.seed)
 
 elif args.dataset[-4:] == '.npz':
     # use .npz files
